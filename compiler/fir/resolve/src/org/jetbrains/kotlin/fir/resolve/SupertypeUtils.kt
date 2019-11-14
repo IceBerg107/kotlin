@@ -113,8 +113,8 @@ fun ConeClassLikeType.wrapSubstitutionScopeIfNeed(
         val typeParameters = (declaration as? FirTypeParametersOwner)?.typeParameters.orEmpty()
         @Suppress("UNCHECKED_CAST")
         val substitution = typeParameters.zip(this.typeArguments) { typeParameter, typeArgument ->
-            typeParameter.symbol to (typeArgument as? ConeTypedProjection)?.type
-        }.filter { (_, type) -> type != null }.toMap() as Map<FirTypeParameterSymbol, ConeKotlinType>
+            typeParameter.symbol to typeArgument
+        }.toMap()
 
         FirClassSubstitutionScope(session, useSiteMemberScope, builder, substitution)
     }

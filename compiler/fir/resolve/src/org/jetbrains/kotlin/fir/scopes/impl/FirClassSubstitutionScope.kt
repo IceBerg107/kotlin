@@ -19,10 +19,7 @@ import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculatorWithJum
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.ConeKotlinType
-import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
-import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.types.coneTypeUnsafe
+import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.name.Name
 
@@ -30,7 +27,7 @@ class FirClassSubstitutionScope(
     private val session: FirSession,
     private val useSiteMemberScope: FirScope,
     scopeSession: ScopeSession,
-    substitution: Map<FirTypeParameterSymbol, ConeKotlinType>
+    substitution: Map<FirTypeParameterSymbol, ConeKotlinTypeProjection>
 ) : FirScope() {
 
     private val fakeOverrideFunctions = mutableMapOf<FirFunctionSymbol<*>, FirFunctionSymbol<*>>()
