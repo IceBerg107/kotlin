@@ -71,6 +71,43 @@ interface ReferenceSymbolTable {
     fun leaveScope(owner: DeclarationDescriptor)
 }
 
+class ChainedSymbolTable(private val original: ReferenceSymbolTable) : SymbolTable() {
+    operator fun contains(owner: DeclarationDescriptor): Boolean = TODO()
+
+    override fun referenceClass(descriptor: ClassDescriptor): IrClassSymbol =
+        if (descriptor in this) super.referenceClass(descriptor) else original.referenceClass(descriptor)
+
+    override fun referenceConstructor(descriptor: ClassConstructorDescriptor): IrConstructorSymbol =
+        if (descriptor in this) super.referenceConstructor(descriptor) else original.referenceConstructor(descriptor)
+
+    override fun referenceEnumEntry(descriptor: ClassDescriptor): IrEnumEntrySymbol =
+        if (descriptor in this) super.referenceEnumEntry(descriptor) else original.referenceEnumEntry(descriptor)
+
+    override fun referenceField(descriptor: PropertyDescriptor): IrFieldSymbol =
+        if (descriptor in this) super.referenceField(descriptor) else original.referenceField(descriptor)
+
+    override fun referenceProperty(descriptor: PropertyDescriptor, generate: () -> IrProperty): IrProperty =
+        if (descriptor in this) super.referenceProperty(descriptor, generate) else original.referenceProperty(descriptor, generate)
+
+    override fun referenceSimpleFunction(descriptor: FunctionDescriptor): IrSimpleFunctionSymbol =
+        if (descriptor in this) super.referenceSimpleFunction(descriptor) else original.referenceSimpleFunction(descriptor)
+
+    override fun referenceDeclaredFunction(descriptor: FunctionDescriptor): IrSimpleFunctionSymbol =
+        if (descriptor in this) super.referenceDeclaredFunction(descriptor) else original.referenceDeclaredFunction(descriptor)
+
+    override fun referenceValueParameter(descriptor: ParameterDescriptor): IrValueParameterSymbol =
+        if (descriptor in this) super.referenceValueParameter(descriptor) else original.referenceValueParameter(descriptor)
+
+    override fun referenceTypeParameter(classifier: TypeParameterDescriptor): IrTypeParameterSymbol =
+        if (classifier in this) super.referenceTypeParameter(classifier) else original.referenceTypeParameter(classifier)
+
+    override fun referenceVariable(descriptor: VariableDescriptor): IrVariableSymbol =
+        if (descriptor in this) super.referenceVariable(descriptor) else original.referenceVariable(descriptor)
+
+    override fun referenceTypeAlias(descriptor: TypeAliasDescriptor): IrTypeAliasSymbol =
+        if (descriptor in this) super.referenceTypeAlias(descriptor) else original.referenceTypeAlias(descriptor)
+}
+
 open class SymbolTable : ReferenceSymbolTable {
 
     @Suppress("LeakingThis")
@@ -222,6 +259,19 @@ open class SymbolTable : ReferenceSymbolTable {
         ScopedSymbolTable<VariableDescriptorWithAccessors, IrLocalDelegatedProperty, IrLocalDelegatedPropertySymbol>()
     private val scopedSymbolTables =
         listOf(valueParameterSymbolTable, variableSymbolTable, scopedTypeParameterSymbolTable, localDelegatedPropertySymbolTable)
+
+//    private val allSymbolTables: List<SymbolTableBase<out DeclarationDescriptor, out IrSymbolOwner, IrBindableSymbol<DeclarationDescriptorNonRoot, out IrSymbolOwner>>> = listOf(
+//        externalPackageFragmentTable,
+//        scriptSymbolTable,
+//        classSymbolTable,
+//        constructorSymbolTable,
+//        enumEntrySymbolTable,
+//        fieldSymbolTable,
+//        simpleFunctionSymbolTable,
+//        propertySymbolTable,
+//        typeAliasSymbolTable,
+//        globalTypeParameterSymbolTable
+//    ) + scopedSymbolTables
 
     fun referenceExternalPackageFragment(descriptor: PackageFragmentDescriptor) =
         externalPackageFragmentTable.referenced(descriptor) { IrExternalPackageFragmentSymbolImpl(descriptor) }

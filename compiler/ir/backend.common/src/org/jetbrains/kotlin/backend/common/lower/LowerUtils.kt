@@ -42,11 +42,11 @@ import org.jetbrains.kotlin.name.Name
 class IrLoweringContext(backendContext: BackendContext) : IrGeneratorContextBase(backendContext.irBuiltIns)
 
 class DeclarationIrBuilder(
-    backendContext: BackendContext,
+    generatorContext: IrGeneratorContext,
     symbol: IrSymbol,
     startOffset: Int = UNDEFINED_OFFSET, endOffset: Int = UNDEFINED_OFFSET
 ) : IrBuilderWithScope(
-    IrLoweringContext(backendContext),
+    generatorContext,
     Scope(symbol),
     startOffset,
     endOffset
@@ -76,7 +76,7 @@ fun BackendContext.createIrBuilder(
     startOffset: Int = UNDEFINED_OFFSET,
     endOffset: Int = UNDEFINED_OFFSET
 ) =
-    DeclarationIrBuilder(this, symbol, startOffset, endOffset)
+    DeclarationIrBuilder(IrLoweringContext(this), symbol, startOffset, endOffset)
 
 
 fun <T : IrBuilder> T.at(element: IrElement) = this.at(element.startOffset, element.endOffset)

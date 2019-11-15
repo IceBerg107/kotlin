@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.backend.jvm
 
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.ir.createParameterDeclarations
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
 import org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen
@@ -38,6 +39,23 @@ object JvmBackendFacade {
         val facadeGenerator = FacadeClassGenerator()
         val psi2ir = Psi2IrTranslator(state.languageVersionSettings, facadeClassGenerator = facadeGenerator::generate)
         val psi2irContext = psi2ir.createGeneratorContext(state.module, state.bindingContext, extensions = JvmGeneratorExtensions)
+
+        for (extension in IrGenerationExtension.getInstances(state.project)) {
+            psi2ir.addPostprocessingStep { module ->
+                extension.generate(
+                    module,
+                    IrPluginContext(
+                        psi2irContext.moduleDescriptor,
+                        psi2irContext.bindingContext,
+                        psi2irContext.languageVersionSettings,
+                        psi2irContext.symbolTable,
+                        psi2irContext.typeTranslator,
+                        psi2irContext.irBuiltIns
+                    )
+                )
+            }
+        }
+
         val irModuleFragment = psi2ir.generateModuleFragment(psi2irContext, files)
         doGenerateFilesInternal(
             state, errorHandler, irModuleFragment, psi2irContext.symbolTable, psi2irContext.sourceManager, phaseConfig, facadeGenerator
@@ -71,12 +89,6 @@ object JvmBackendFacade {
             facadeClassGenerator = facadeGenerator::generate
         ).generateUnboundSymbolsAsDependencies()
         context.classNameOverride = facadeGenerator.classNameOverride
-
-        for (irFile in irModuleFragment.files) {
-            for (extension in IrGenerationExtension.getInstances(context.state.project)) {
-                extension.generate(irFile, context, context.state.bindingContext)
-            }
-        }
 
         try {
             JvmLower(context).lower(irModuleFragment)

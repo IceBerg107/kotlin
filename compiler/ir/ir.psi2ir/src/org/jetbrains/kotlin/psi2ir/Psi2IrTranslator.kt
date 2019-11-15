@@ -36,18 +36,16 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 import org.jetbrains.kotlin.utils.SmartList
 
+typealias Psi2IrPostprocessingStep = (IrModuleFragment) -> Unit
+
 class Psi2IrTranslator(
     val languageVersionSettings: LanguageVersionSettings,
     val configuration: Psi2IrConfiguration = Psi2IrConfiguration(),
     val facadeClassGenerator: (DeserializedContainerSource) -> IrClass? = { null }
 ) {
-    interface PostprocessingStep {
-        fun postprocess(context: GeneratorContext, irElement: IrElement)
-    }
+    private val postprocessingSteps = SmartList<Psi2IrPostprocessingStep>()
 
-    private val postprocessingSteps = SmartList<PostprocessingStep>()
-
-    fun add(step: PostprocessingStep) {
+    fun addPostprocessingStep(step: Psi2IrPostprocessingStep) {
         postprocessingSteps.add(step)
     }
 
@@ -78,20 +76,18 @@ class Psi2IrTranslator(
         val moduleGenerator = ModuleGenerator(context)
         val irModule = moduleGenerator.generateModuleFragmentWithoutDependencies(ktFiles)
 
-        // This is required for implicit casts insertion on IrTypes (work-in-progress).
-        moduleGenerator.generateUnboundSymbolsAsDependencies(irModule, deserializer, irProviders, facadeClassGenerator)
         irModule.patchDeclarationParents()
-
         postprocess(context, irModule)
+
         moduleGenerator.generateUnboundSymbolsAsDependencies(irModule, deserializer, irProviders, facadeClassGenerator)
         return irModule
     }
 
-    private fun postprocess(context: GeneratorContext, irElement: IrElement) {
+    private fun postprocess(context: GeneratorContext, irElement: IrModuleFragment) {
         insertImplicitCasts(irElement, context)
         generateAnnotationsForDeclarations(context, irElement)
 
-        postprocessingSteps.forEach { it.postprocess(context, irElement) }
+        postprocessingSteps.forEach { it(irElement) }
 
         irElement.patchDeclarationParents()
     }

@@ -60,7 +60,7 @@ class JsCoreScriptingCompiler(
 
         val psi2ir = Psi2IrTranslator(environment.configuration.languageVersionSettings)
         val psi2irContext = psi2ir.createGeneratorContext(module, bindingContext, symbolTable)
-
+        // todo: postprocessing step for plugins?
         val irModuleFragment = psi2irContext.generateModuleFragment(listOf(snippetKtFile))
 
         val context = JsIrBackendContext(
