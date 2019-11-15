@@ -252,7 +252,13 @@ class ExpressionCodegen(
             writeValueParameterInLocalVariableTable(extensionReceiverParameter, startLabel, endLabel, true)
         }
         for (param in irFunction.valueParameters) {
-            writeValueParameterInLocalVariableTable(param, startLabel, endLabel, false)
+            //TODO: or synthetic check?
+            if (param.origin != IrDeclarationOrigin.MASK_FOR_DEFAULT_FUNCTION &&
+                param.origin != IrDeclarationOrigin.DEFAULT_CONSTRUCTOR_MARKER &&
+                param.origin != IrDeclarationOrigin.METHOD_HANDLER_IN_DEFAULT_FUNCTION
+            ) {
+                writeValueParameterInLocalVariableTable(param, startLabel, endLabel, false)
+            }
         }
     }
 
