@@ -329,7 +329,7 @@ class ExpressionCodegen(
 
     override fun visitFunctionAccess(expression: IrFunctionAccessExpression, data: BlockInfo): PromisedValue {
         classCodegen.context.irIntrinsics.getIntrinsic(expression.symbol)
-            ?.invoke(expression, this, data)?.let { return it.coerce(expression.type) }
+            ?.invoke(expression, this, data)?.let { return it }
 
         val callable = methodSignatureMapper.mapToCallableMethod(expression)
         val callee = expression.symbol.owner
