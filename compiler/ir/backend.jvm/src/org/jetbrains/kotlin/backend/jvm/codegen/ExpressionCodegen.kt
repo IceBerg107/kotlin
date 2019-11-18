@@ -936,6 +936,13 @@ class ExpressionCodegen(
         }
     }
 
+    private fun IrFunction.resolveMultiFileFacades(): IrFunction {
+        //TODO: move to ResolveInlineCalls lower (now it's goes before generateMultifileFacadesPhase)
+        return if (origin == JvmLoweredDeclarationOrigin.MULTIFILE_BRIDGE) {
+            context.multifileFacadeMemberToPartMember[symbol]!!.owner
+        } else this
+    }
+
     private fun getOrCreateCallGenerator(
         element: IrFunctionAccessExpression, data: BlockInfo, signature: JvmMethodSignature
     ): IrCallGenerator {
@@ -945,7 +952,7 @@ class ExpressionCodegen(
             return IrCallGenerator.DefaultCallGenerator
         }
 
-        val callee = element.symbol.owner
+        val callee = element.symbol.owner.resolveMultiFileFacades()
         val typeArgumentContainer = if (callee is IrConstructor) callee.parentAsClass else callee
         val typeArguments =
             if (element.typeArgumentsCount == 0) {
