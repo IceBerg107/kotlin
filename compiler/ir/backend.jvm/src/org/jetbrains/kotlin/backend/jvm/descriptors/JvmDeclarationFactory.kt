@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.backend.common.ir.*
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.codegen.MethodSignatureMapper
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
+import org.jetbrains.kotlin.backend.jvm.ir.allFieldsAreJvmField
 import org.jetbrains.kotlin.builtins.CompanionObjectMapping.isMappedIntrinsicCompanionObject
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
@@ -21,7 +22,9 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.*
 import org.jetbrains.kotlin.ir.descriptors.WrappedClassConstructorDescriptor
 import org.jetbrains.kotlin.ir.descriptors.WrappedClassDescriptor
+import org.jetbrains.kotlin.ir.descriptors.WrappedFieldDescriptor
 import org.jetbrains.kotlin.ir.descriptors.WrappedValueParameterDescriptor
+import org.jetbrains.kotlin.ir.symbols.IrFieldSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.*
@@ -228,8 +231,54 @@ class JvmDeclarationFactory(
                     }
                 }
             }
-
-
         }
 
+    internal fun mapField(oldSymbol: IrFieldSymbol): IrFieldSymbol? {
+        val property = oldSymbol.owner.correspondingPropertySymbol?.owner ?: return null
+        val klass = property.parent as? IrClass ?: return null
+        return when {
+            klass.isCompanion -> {
+                val outerClass = klass.parentAsClass
+                val newParent = if (outerClass.isJvmInterface && !klass.allFieldsAreJvmField()) klass else outerClass
+                copyFieldIfNeeded(property, newParent, isStatic = true)?.symbol
+            }
+            klass.isObject -> {
+                copyFieldIfNeeded(property, klass, isStatic = true)?.symbol
+            }
+            oldSymbol.owner.hasAnnotation(JvmAbi.JVM_FIELD_ANNOTATION_FQ_NAME) -> {
+                copyFieldIfNeeded(property, klass, isStatic = false)?.symbol
+            }
+            else -> null
+        }
+    }
+
+    internal fun copyFieldIfNeeded(irProperty: IrProperty, newParent: IrClass, isStatic: Boolean): IrField? {
+        if (irProperty.origin == IrDeclarationOrigin.FAKE_OVERRIDE) return null
+        val oldField = irProperty.backingField ?: return null
+        return copyField(oldField, newParent, isStatic)
+    }
+
+    private val fieldRedirections = HashMap<IrField, IrField>()
+
+    // TODO: looks fishy to capture other values into lambda for getOrPut
+    private fun copyField(oldField: IrField, newParent: IrClass, isStatic: Boolean): IrField {
+        return fieldRedirections.getOrPut(oldField) {
+            val descriptor = WrappedFieldDescriptor(oldField.descriptor.annotations, oldField.descriptor.source)
+            IrFieldImpl(
+                oldField.startOffset, oldField.endOffset,
+                IrDeclarationOrigin.PROPERTY_BACKING_FIELD,
+                IrFieldSymbolImpl(descriptor),
+                oldField.name, oldField.type, oldField.visibility,
+                isFinal = oldField.isFinal,
+                isExternal = oldField.isExternal,
+                isStatic = isStatic,
+                isFakeOverride = false
+            ).apply {
+                descriptor.bind(this)
+                parent = newParent
+                annotations.addAll(oldField.annotations)
+                metadata = oldField.metadata
+            }
+        }
+    }
 }

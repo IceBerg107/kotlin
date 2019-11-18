@@ -15033,6 +15033,11 @@ public class BlackBoxCodegenTestGenerated extends AbstractBlackBoxCodegenTest {
             runTest("compiler/testData/codegen/box/jvmField/interfaceCompanionWithJava.kt");
         }
 
+        @TestMetadata("objectPropertyInAnotherFile.kt")
+        public void testObjectPropertyInAnotherFile() throws Exception {
+            runTest("compiler/testData/codegen/box/jvmField/objectPropertyInAnotherFile.kt");
+        }
+
         @TestMetadata("publicField.kt")
         public void testPublicField() throws Exception {
             runTest("compiler/testData/codegen/box/jvmField/publicField.kt");

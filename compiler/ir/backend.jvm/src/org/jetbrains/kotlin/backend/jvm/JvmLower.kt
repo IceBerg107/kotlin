@@ -233,6 +233,8 @@ private val jvmFilePhases =
         lateinitPhase then
 
         moveOrCopyCompanionObjectFieldsPhase then
+        replaceStaticFieldCallSitesPhase then
+
         inlineCallableReferenceToLambdaPhase then
         propertyReferencePhase then
         constPhase then

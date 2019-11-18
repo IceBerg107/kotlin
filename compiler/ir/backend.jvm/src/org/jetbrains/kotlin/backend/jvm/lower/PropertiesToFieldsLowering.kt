@@ -5,11 +5,11 @@
 
 package org.jetbrains.kotlin.backend.jvm.lower
 
-import org.jetbrains.kotlin.backend.common.CommonBackendContext
 import org.jetbrains.kotlin.backend.common.FileLoweringPass
 import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irBlock
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
+import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.ir.IrStatement
@@ -18,7 +18,9 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFieldAccessExpression
 import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
-import org.jetbrains.kotlin.ir.expressions.impl.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetFieldImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
@@ -30,7 +32,7 @@ internal val propertiesToFieldsPhase = makeIrFilePhase(
     description = "Replace calls to default property accessors with field access and remove those accessors"
 )
 
-class PropertiesToFieldsLowering(val context: CommonBackendContext) : IrElementTransformerVoid(), FileLoweringPass {
+class PropertiesToFieldsLowering(val context: JvmBackendContext) : IrElementTransformerVoid(), FileLoweringPass {
     override fun lower(irFile: IrFile) {
         irFile.transformChildrenVoid(this)
     }
@@ -68,13 +70,13 @@ class PropertiesToFieldsLowering(val context: CommonBackendContext) : IrElementT
 
         if ((property.parent as? IrClass)?.kind == ClassKind.ANNOTATION_CLASS) return false
 
-        if (property.backingField?.hasAnnotation(JVM_FIELD_ANNOTATION_FQ_NAME) == true) return true
+        if (property.correctBackingField?.hasAnnotation(JVM_FIELD_ANNOTATION_FQ_NAME) == true) return true
 
         return accessor.origin == IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR && Visibilities.isPrivate(accessor.visibility)
     }
 
     private fun substituteSetter(irProperty: IrProperty, expression: IrCall): IrExpression {
-        val backingField = irProperty.backingField!!
+        val backingField = irProperty.correctBackingField!!
         val receiver = expression.dispatchReceiver?.transform(this, null)
         val setExpr = IrSetFieldImpl(
             expression.startOffset,
@@ -90,7 +92,7 @@ class PropertiesToFieldsLowering(val context: CommonBackendContext) : IrElementT
     }
 
     private fun substituteGetter(irProperty: IrProperty, expression: IrCall): IrExpression {
-        val backingField = irProperty.backingField!!
+        val backingField = irProperty.correctBackingField!!
         val receiver = expression.dispatchReceiver?.transform(this, null)
         val getExpr = IrGetFieldImpl(
             expression.startOffset,
@@ -103,6 +105,11 @@ class PropertiesToFieldsLowering(val context: CommonBackendContext) : IrElementT
         )
         return buildSubstitution(backingField.isStatic, getExpr, receiver)
     }
+
+    private val IrProperty.correctBackingField: IrField?
+        get() = backingField?.symbol?.let { symbol ->
+            context.declarationFactory.mapField(symbol) ?: symbol
+        }?.owner
 
     private fun buildSubstitution(needBlock: Boolean, setOrGetExpr: IrFieldAccessExpression, receiver: IrExpression?): IrExpression {
         if (receiver != null && needBlock) {

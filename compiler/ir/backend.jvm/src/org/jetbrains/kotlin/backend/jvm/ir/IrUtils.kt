@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_FQ_NAME
 
@@ -148,3 +149,7 @@ fun IrExpression.isSmartcastFromHigherThanNullable(context: JvmBackendContext) =
     this is IrTypeOperatorCall &&
             operator == IrTypeOperator.IMPLICIT_CAST &&
             !this.argument.type.isSubtypeOf(type.makeNullable(), context.irBuiltIns)
+
+fun IrClass.allFieldsAreJvmField(): Boolean =
+    declarations.filterIsInstance<IrProperty>()
+        .all { it.backingField?.hasAnnotation(JvmAbi.JVM_FIELD_ANNOTATION_FQ_NAME) != false }
