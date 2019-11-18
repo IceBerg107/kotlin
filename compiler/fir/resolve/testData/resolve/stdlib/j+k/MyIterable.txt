@@ -8,5 +8,5 @@ FILE: test.kt
     }
     public final fun test(some: R|kotlin/collections/Iterable<kotlin/String>|): R|kotlin/Unit| {
         lval it: R|kotlin/collections/Iterator<kotlin/String>| = R|<local>/some|.R|FakeOverride<kotlin/collections/Iterable.iterator: R|kotlin/collections/Iterator<kotlin/String>|>|()
-        lval split: <ERROR TYPE REF: Inapplicable(WRONG_RECEIVER): [java/lang/Iterable.spliterator]> = R|<local>/some|.<Inapplicable(WRONG_RECEIVER): [java/lang/Iterable.spliterator]>#()
+        lval split: R|java/util/Spliterator<T!>| = R|<local>/some|.R|FakeOverride<java/lang/Iterable.spliterator: R|java/util/Spliterator<T!>|>|()
     }

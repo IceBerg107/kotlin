@@ -63,7 +63,7 @@ internal sealed class CheckReceivers : ResolutionStage() {
         }
 
         override fun ExplicitReceiverKind.shouldBeCheckedAgainstExplicit(): Boolean {
-            return this == DISPATCH_RECEIVER || this == BOTH_RECEIVERS
+            return this == BOTH_RECEIVERS // DISPATCH_RECEIVER should not be checked at all (?)
         }
 
         override fun Candidate.getReceiverType(): ConeKotlinType? {

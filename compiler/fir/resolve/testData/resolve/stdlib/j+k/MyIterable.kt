@@ -12,5 +12,5 @@ interface UseIterable : MyIterable<String> {
 
 fun test(some: Iterable<String>) {
     val it = some.iterator()
-    val split = some.<!INAPPLICABLE_CANDIDATE!>spliterator<!>()
+    val split = some.spliterator()
 }
