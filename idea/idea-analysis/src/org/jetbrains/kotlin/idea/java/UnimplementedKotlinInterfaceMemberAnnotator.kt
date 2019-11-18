@@ -15,9 +15,17 @@ import com.intellij.lang.annotation.Annotation
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.psi.*
+import com.intellij.psi.stubs.StubTreeLoader
+import com.jetbrains.rd.util.currentThreadName
+import org.jetbrains.kotlin.asJava.builder.toLightClassOrigin
 import org.jetbrains.kotlin.asJava.classes.KtLightClassForSourceDeclaration
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
+import org.jetbrains.kotlin.asJava.elements.KtLightMethodImpl
 import org.jetbrains.kotlin.idea.KotlinLanguage
+import org.jetbrains.kotlin.idea.caches.lightClasses.KtLightClassForDecompiledDeclaration
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.resolve.annotations.JVM_STATIC_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_FQ_NAME
 import org.jetbrains.kotlin.utils.ifEmpty
@@ -36,6 +44,28 @@ class UnimplementedKotlinInterfaceMemberAnnotator : Annotator {
 
     }
 
+    private fun PsiMethod.getAnnotationsForCompiledDeclaration(): Sequence<String> {
+        if (this !is KtLightMethodImpl) return emptySequence()
+        if (this.containingClass !is KtLightClassForDecompiledDeclaration) return emptySequence()
+        val origin = kotlinOrigin ?: return emptySequence()
+
+        fun KtUserType.toFqName(): String? {
+            var result: String = referencedName ?: return null
+            var currentQualifier = qualifier
+            while (currentQualifier !== null) {
+                currentQualifier.referencedName ?: return null
+                result = "${currentQualifier.referencedName}.$result"
+                currentQualifier = currentQualifier.qualifier
+            }
+            return result
+        }
+
+        return origin.annotationEntries
+            .asSequence()
+            .map { (it.typeReference?.typeElement as? KtUserType)?.toFqName() }
+            .filterNotNull()
+    }
+
     private fun findUnimplementedMethod(psiClass: PsiClass): KtLightMethod? {
         val signaturesFromKotlinInterfaces = psiClass.visibleSignatures.filter { signature ->
             signature.method.let { it is KtLightMethod && it.hasModifierProperty(PsiModifier.DEFAULT) }
@@ -48,6 +78,9 @@ class UnimplementedKotlinInterfaceMemberAnnotator : Annotator {
             it !in signaturesVisibleThroughKotlinSuperClass &&
                     it.method.modifierList.annotations.none { annotation ->
                         val qualifiedName = annotation.qualifiedName
+                        qualifiedName == JVM_DEFAULT_FQ_NAME.asString() || qualifiedName == JVM_STATIC_ANNOTATION_FQ_NAME.asString()
+                    } &&
+                    it.method.getAnnotationsForCompiledDeclaration().none { qualifiedName ->
                         qualifiedName == JVM_DEFAULT_FQ_NAME.asString() || qualifiedName == JVM_STATIC_ANNOTATION_FQ_NAME.asString()
                     }
         }?.method as? KtLightMethod
