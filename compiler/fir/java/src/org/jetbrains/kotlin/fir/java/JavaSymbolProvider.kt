@@ -92,7 +92,7 @@ class JavaSymbolProvider(
         visitedSymbols: MutableSet<FirClassLikeSymbol<*>>
     ): JavaClassUseSiteMemberScope {
         return scopeSession.getOrBuild(regularClass.symbol, JAVA_USE_SITE) {
-            val declaredScope = declaredMemberScope(regularClass)
+            val declaredScope = declaredMemberScope(regularClass, scopeSession)
             val superTypeEnhancementScopes =
                 lookupSuperTypes(regularClass, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
                     .mapNotNull { useSiteSuperType ->

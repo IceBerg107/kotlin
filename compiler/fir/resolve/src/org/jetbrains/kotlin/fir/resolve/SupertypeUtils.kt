@@ -83,7 +83,7 @@ fun FirTypeAlias.buildUseSiteMemberScope(useSiteSession: FirSession, builder: Sc
 fun FirClass<*>.buildDefaultUseSiteMemberScope(useSiteSession: FirSession, builder: ScopeSession): FirScope {
     return builder.getOrBuild(symbol, USE_SITE) {
 
-        val declaredScope = declaredMemberScope(this)
+        val declaredScope = declaredMemberScope(this, builder)
         val scopes = lookupSuperTypes(this, lookupInterfaces = true, deep = false, useSiteSession = useSiteSession)
             .mapNotNull { useSiteSuperType ->
                 if (useSiteSuperType is ConeClassErrorType) return@mapNotNull null
